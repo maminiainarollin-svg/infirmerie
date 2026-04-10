@@ -16,12 +16,21 @@
   .row { display: flex; gap: 8px; flex-wrap: wrap; }
   .row > div { flex: 1; min-width: 140px; }
   button { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
+  .btn-report { background: #27ae60; margin-bottom: 10px; }
   .btn-edit { background: #2980b9; padding: 10px; font-size: 0.8em; margin-bottom: 4px; width: 100%; }
   .btn-delete { background: #7f8c8d; padding: 10px; font-size: 0.8em; width: 100%; }
   .search-box { background: #e8e0d5; border: 2px solid var(--accent); }
   .stats-badge { background: var(--accent); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
   
-  .history-container { max-height: 450px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px; }
+  /* Container pour éviter la liste trop longue */
+  .history-container { 
+    max-height: 450px; 
+    overflow-y: auto; 
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  
   table { width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: fixed; }
   th, td { border: 1px solid var(--border); padding: 8px; text-align: left; vertical-align: top; }
   th { background: var(--text); color: white; position: sticky; top: 0; z-index: 1; }
@@ -30,10 +39,10 @@
   table th:nth-child(2), table td:nth-child(2) { width: 40%; }
   table th:nth-child(3), table td:nth-child(3) { width: 15%; }
 
-  .time-info { color: #c0392b; font-weight: bold; }
-  .status-badge { font-weight: bold; font-size: 0.7em; padding: 2px 4px; border-radius: 4px; display: inline-block; margin-bottom: 3px; border: 1px solid; }
-  .status-classe { color: #27ae60; }
-  .status-rentree { color: #e67e22; }
+  .time-info { color: #c0392b; font-weight: bold; font-size: 0.9em; }
+  .status-badge { font-weight: bold; font-size: 0.75em; padding: 2px 4px; border-radius: 4px; display: inline-block; margin-bottom: 3px; border: 1px solid; }
+  .status-classe { color: #27ae60; border-color: #27ae60; }
+  .status-rentree { color: #e67e22; border-color: #e67e22; }
   .hidden { display: none; }
 </style>
 </head>
@@ -69,12 +78,12 @@
     </div>
     <div id="section-recup" class="form-group hidden"><label>Récupéré par</label><input type="text" id="recupPar"></div>
     <button type="submit" id="submit-btn">Enregistrer</button>
-    <button type="button" id="cancel-btn" style="background:#bdc3c7; display:none; margin-top:5px;">Annuler / Nouveau</button>
+    <button type="button" id="cancel-btn" style="background:#bdc3c7; display:none; margin-top:5px;" onclick="resetForm()">Annuler / Nouveau</button>
   </form>
 </div>
 
 <div class="card search-box">
-  <input type="text" id="searchInput" onkeyup="filterHistory()" placeholder="🔍 Chercher un nom...">
+  <input type="text" id="searchInput" onkeyup="filterHistory()" placeholder="🔍 Chercher un élève...">
 </div>
 
 <div class="card">
@@ -90,8 +99,8 @@
 </div>
 
 <script>
-  // TA LISTE CSV OFFICIELLE (Formatée pour le code)
-  const officialList = [
+  // LISTE OFFICIELLE DE TON CSV (Intégrée proprement)
+  const officialData = [
     {id:"1", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Christianah", classe:"Tb", motif:"Maux de ventre, vomissement", heureArrivee:"13:40", heureSortie:"", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
     {id:"2", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Aro", classe:"Tb", motif:"Diarrhée", heureArrivee:"13:36", heureSortie:"", typeSortie:"Retour à la maison", recupPar:"", appelParents:"Non"},
     {id:"3", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Maël", classe:"2c", motif:"Maux de ventre", heureArrivee:"12:30", heureSortie:"12:36", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
@@ -125,13 +134,15 @@
     {id:"31", dateBrute:"2026-03-02", dateAffiche:"02/03/2026", nom:"Finoana", classe:"5c", motif:"Maux de dents", heureArrivee:"08:15", heureSortie:"08:40", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"}
   ];
 
-  let passages = JSON.parse(localStorage.getItem('infirmerie_data'));
-  
-  // SÉCURITÉ ANTI-BUG : Si données corrompues ou format date bizarre détecté
-  if (!passages || !Array.isArray(passages) || passages.some(p => typeof p !== 'object' || !p.dateBrute || p.dateBrute.includes('/'))) {
-      passages = officialList;
-      localStorage.setItem('infirmerie_data', JSON.stringify(passages));
+  // --- SÉCURITÉ DE NETTOYAGE FORCÉ ---
+  // Si le code voit qu'il n'a pas encore fait le "grand ménage v4", il vide tout.
+  if (localStorage.getItem('v4_force_clean') !== 'true') {
+      localStorage.clear();
+      localStorage.setItem('infirmerie_data', JSON.stringify(officialData));
+      localStorage.setItem('v4_force_clean', 'true');
   }
+
+  let passages = JSON.parse(localStorage.getItem('infirmerie_data')) || officialData;
 
   const form = document.getElementById('infirmery-form');
   const historyBody = document.getElementById('history-body');
@@ -168,7 +179,7 @@
   form.onsubmit = (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-id').value || Date.now().toString();
-    const dStr = document.getElementById('datePassage').value; 
+    const dStr = document.getElementById('datePassage').value;
     const pDate = dStr.split('-');
     const dateAffiche = `${pDate[2]}/${pDate[1]}/${pDate[0]}`;
 
