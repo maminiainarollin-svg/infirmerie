@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infirmerie - Rapport Officiel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #f5f0eb; --surface: #ffffff; --accent: #c0392b; --text: #2c2416; --border: #ddd5c8; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); padding: 10px; line-height: 1.4; font-size: 16px; }
+  .card { background: var(--surface); padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
+  h2 { margin-top: 0; color: var(--accent); font-size: 1.1em; border-bottom: 2px solid var(--bg); padding-bottom: 8px; }
+  .form-group { margin-bottom: 12px; }
+  label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.85em; }
+  input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 140px; }
+  button { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
+  .btn-edit { background: #2980b9; padding: 10px; font-size: 0.8em; margin-bottom: 4px; width: 100%; }
+  .btn-delete { background: #7f8c8d; padding: 10px; font-size: 0.8em; width: 100%; }
+  .search-box { background: #e8e0d5; border: 2px solid var(--accent); }
+  .stats-badge { background: var(--accent); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+  
+  .history-container { max-height: 450px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: fixed; }
+  th, td { border: 1px solid var(--border); padding: 8px; text-align: left; vertical-align: top; }
+  th { background: var(--text); color: white; position: sticky; top: 0; z-index: 1; }
+  
+  table th:nth-child(1), table td:nth-child(1) { width: 45%; }
+  table th:nth-child(2), table td:nth-child(2) { width: 40%; }
+  table th:nth-child(3), table td:nth-child(3) { width: 15%; }
+
+  .time-info { color: #c0392b; font-weight: bold; }
+  .status-badge { font-weight: bold; font-size: 0.7em; padding: 2px 4px; border-radius: 4px; display: inline-block; margin-bottom: 3px; border: 1px solid; }
+  .status-classe { color: #27ae60; }
+  .status-rentree { color: #e67e22; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2 id="form-title">Saisie de Passage</h2>
+  <form id="infirmery-form">
+    <input type="hidden" id="edit-id">
+    <div class="form-group"><label>Date</label><input type="date" id="datePassage" required></div>
+    <div class="row">
+      <div class="form-group"><label>Élève</label><input type="text" id="nom" required></div>
+      <div class="form-group"><label>Classe</label><input type="text" id="classe" required></div>
+    </div>
+    <div class="form-group"><label>Motif</label><textarea id="motif" rows="2" required></textarea></div>
+    <div class="row">
+      <div class="form-group"><label>Heure Arrivée</label><input type="time" id="heureArrivee" required></div>
+      <div class="form-group"><label>Appel Parents</label>
+        <select id="appelParents">
+          <option value="Non">Non</option>
+          <option value="Oui">Oui</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="form-group"><label>Destination</label>
+        <select id="typeSortie" onchange="toggleRecup()">
+          <option value="Retour en classe">CLASSE</option>
+          <option value="Retour à la maison">RENTRÉE</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Heure Sortie</label><input type="time" id="heureSortie"></div>
+    </div>
+    <div id="section-recup" class="form-group hidden"><label>Récupéré par</label><input type="text" id="recupPar"></div>
+    <button type="submit" id="submit-btn">Enregistrer</button>
+    <button type="button" id="cancel-btn" style="background:#bdc3c7; display:none; margin-top:5px;">Annuler / Nouveau</button>
+  </form>
+</div>
+
+<div class="card search-box">
+  <input type="text" id="searchInput" onkeyup="filterHistory()" placeholder="🔍 Chercher un nom...">
+</div>
+
+<div class="card">
+  <h2>Historique <span id="count-label" class="stats-badge">0</span></h2>
+  <div class="history-container">
+    <table>
+      <thead>
+        <tr><th>Élève</th><th>Infos</th><th>Action</th></tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // TA LISTE CSV OFFICIELLE (Formatée pour le code)
+  const officialList = [
+    {id:"1", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Christianah", classe:"Tb", motif:"Maux de ventre, vomissement", heureArrivee:"13:40", heureSortie:"", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"2", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Aro", classe:"Tb", motif:"Diarrhée", heureArrivee:"13:36", heureSortie:"", typeSortie:"Retour à la maison", recupPar:"", appelParents:"Non"},
+    {id:"3", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Maël", classe:"2c", motif:"Maux de ventre", heureArrivee:"12:30", heureSortie:"12:36", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"4", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Fetra", classe:"2f", motif:"Douleur au bras gauche (Voltinax)", heureArrivee:"12:27", heureSortie:"12:29", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"5", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Sarah", classe:"1a", motif:"Maux de tête, rhume", heureArrivee:"12:10", heureSortie:"12:16", typeSortie:"Retour à la maison", recupPar:"Chauffeur", appelParents:"Oui"},
+    {id:"6", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Francia", classe:"2b", motif:"Maux de ventre", heureArrivee:"11:51", heureSortie:"11:54", typeSortie:"Retour à la maison", recupPar:"Bonne", appelParents:"Oui"},
+    {id:"7", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Ifitia", classe:"4b", motif:"Malaise, gène respiratoire", heureArrivee:"10:15", heureSortie:"10:42", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"8", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Joela", classe:"4b", motif:"Picotements des yeux, maux de tête", heureArrivee:"10:15", heureSortie:"10:30", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"9", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Nolan", classe:"4b", motif:"Maux de tête", heureArrivee:"09:40", heureSortie:"09:52", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"10", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Lantoniaina", classe:"1a", motif:"Grippe, maux de tête", heureArrivee:"09:12", heureSortie:"09:45", typeSortie:"Retour à la maison", recupPar:"Mère", appelParents:"Oui"},
+    {id:"11", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Mialy", classe:"1a", motif:"Maux de ventre", heureArrivee:"09:10", heureSortie:"09:30", typeSortie:"Retour à la maison", recupPar:"Père", appelParents:"Oui"},
+    {id:"12", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Inaya", classe:"5b", motif:"Saignement du nez", heureArrivee:"08:26", heureSortie:"08:35", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"13", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Anjarah", classe:"5a", motif:"Petite bosse à la tête (Arnican)", heureArrivee:"13:36", heureSortie:"13:38", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"14", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"NyAro", classe:"5a", motif:"Maux de ventre", heureArrivee:"12:15", heureSortie:"12:20", typeSortie:"Retour à la maison", recupPar:"Bonne", appelParents:"Oui"},
+    {id:"15", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Rahil", classe:"1stmgb", motif:"Maux de ventre", heureArrivee:"10:28", heureSortie:"10:36", typeSortie:"Retour à la maison", recupPar:"Bonne", appelParents:"Oui"},
+    {id:"16", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Mijoro", classe:"4c", motif:"Coupure au majeur gauche", heureArrivee:"09:37", heureSortie:"09:40", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"17", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Levi", classe:"5b", motif:"Douleur au mollet droit (Voltinax)", heureArrivee:"09:21", heureSortie:"09:24", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"18", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Johanna", classe:"1stmgc", motif:"Maux de tête", heureArrivee:"09:17", heureSortie:"09:30", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"19", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Manuckaël", classe:"2b", motif:"Grippe", heureArrivee:"08:30", heureSortie:"09:06", typeSortie:"Retour à la maison", recupPar:"Mère", appelParents:"Oui"},
+    {id:"20", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Jason", classe:"1c", motif:"Saignement du nez", heureArrivee:"08:13", heureSortie:"08:48", typeSortie:"Retour à la maison", recupPar:"Mère", appelParents:"Oui"},
+    {id:"21", dateBrute:"2026-03-05", dateAffiche:"05/03/2026", nom:"Endry", classe:"6a", motif:"Éruption cutanée", heureArrivee:"08:08", heureSortie:"08:10", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"22", dateBrute:"2026-03-04", dateAffiche:"04/03/2026", nom:"Andry", classe:"6b", motif:"Maux de tête", heureArrivee:"11:50", heureSortie:"12:00", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"23", dateBrute:"2026-03-04", dateAffiche:"04/03/2026", nom:"Henitsoa", classe:"2c", motif:"Maux de tête, gorge", heureArrivee:"08:50", heureSortie:"09:00", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"24", dateBrute:"2026-03-04", dateAffiche:"04/03/2026", nom:"Fandresena", classe:"6b", motif:"Mal aux yeux", heureArrivee:"08:20", heureSortie:"08:30", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"25", dateBrute:"2026-03-03", dateAffiche:"03/03/2026", nom:"Matthieu", classe:"1b", motif:"Blessure au genou", heureArrivee:"14:10", heureSortie:"14:20", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"26", dateBrute:"2026-03-03", dateAffiche:"03/03/2026", nom:"Zo", classe:"4a", motif:"Maux de ventre", heureArrivee:"10:10", heureSortie:"10:25", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"27", dateBrute:"2026-03-03", dateAffiche:"03/03/2026", nom:"Tiavina", classe:"3c", motif:"Fièvre légère", heureArrivee:"08:45", heureSortie:"09:10", typeSortie:"Retour à la maison", recupPar:"Père", appelParents:"Oui"},
+    {id:"28", dateBrute:"2026-03-02", dateAffiche:"02/03/2026", nom:"Rindra", classe:"6c", motif:"Chute en sport", heureArrivee:"15:30", heureSortie:"15:45", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"29", dateBrute:"2026-03-02", dateAffiche:"02/03/2026", nom:"Koloina", classe:"2f", motif:"Fatigue intense", heureArrivee:"11:00", heureSortie:"11:30", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"30", dateBrute:"2026-03-02", dateAffiche:"02/03/2026", nom:"Lova", classe:"3b", motif:"Maux de tête", heureArrivee:"09:50", heureSortie:"10:05", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
+    {id:"31", dateBrute:"2026-03-02", dateAffiche:"02/03/2026", nom:"Finoana", classe:"5c", motif:"Maux de dents", heureArrivee:"08:15", heureSortie:"08:40", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"}
+  ];
+
+  let passages = JSON.parse(localStorage.getItem('infirmerie_data'));
+  
+  // SÉCURITÉ ANTI-BUG : Si données corrompues ou format date bizarre détecté
+  if (!passages || !Array.isArray(passages) || passages.some(p => typeof p !== 'object' || !p.dateBrute || p.dateBrute.includes('/'))) {
+      passages = officialList;
+      localStorage.setItem('infirmerie_data', JSON.stringify(passages));
+  }
+
+  const form = document.getElementById('infirmery-form');
+  const historyBody = document.getElementById('history-body');
+  document.getElementById('datePassage').valueAsDate = new Date();
+
+  function toggleRecup() {
+    const type = document.getElementById('typeSortie').value;
+    document.getElementById('section-recup').classList.toggle('hidden', !type.includes('maison'));
+  }
+
+  function renderHistory() {
+    // Tri décroissant (Plus récent en haut)
+    passages.sort((a, b) => new Date(b.dateBrute + 'T' + b.heureArrivee) - new Date(a.dateBrute + 'T' + a.heureArrivee));
+    
+    historyBody.innerHTML = '';
+    passages.forEach(p => {
+      const isClasse = p.typeSortie.includes('classe');
+      historyBody.innerHTML += `<tr>
+        <td><b>${p.nom}</b><br><small>${p.classe}</small><br><small>${p.dateAffiche}</small></td>
+        <td>
+          <span class="status-badge ${isClasse ? 'status-classe':'status-rentree'}">${isClasse ? 'CLASSE':'RENTRÉE'}</span><br>
+          <span class="time-info">${p.heureArrivee} ${p.heureSortie ? '→ '+p.heureSortie : ''}</span><br>
+          <small>${p.motif}</small>
+        </td>
+        <td>
+          <button class="btn-edit" onclick="prepareEdit('${p.id}')">✏️</button>
+          <button class="btn-delete" onclick="deleteEntry('${p.id}')">🗑️</button>
+        </td>
+      </tr>`;
+    });
+    filterHistory();
+  }
+
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value || Date.now().toString();
+    const dStr = document.getElementById('datePassage').value; 
+    const pDate = dStr.split('-');
+    const dateAffiche = `${pDate[2]}/${pDate[1]}/${pDate[0]}`;
+
+    const entry = {
+      id, dateBrute: dStr, dateAffiche,
+      nom: document.getElementById('nom').value,
+      classe: document.getElementById('classe').value,
+      motif: document.getElementById('motif').value,
+      heureArrivee: document.getElementById('heureArrivee').value,
+      appelParents: document.getElementById('appelParents').value,
+      typeSortie: document.getElementById('typeSortie').value,
+      heureSortie: document.getElementById('heureSortie').value,
+      recupPar: document.getElementById('recupPar').value
+    };
+    
+    if (document.getElementById('edit-id').value) passages = passages.map(p => p.id === id ? entry : p);
+    else passages.push(entry);
+    
+    localStorage.setItem('infirmerie_data', JSON.stringify(passages));
+    renderHistory();
+    resetForm();
+  };
+
+  function filterHistory() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const rows = historyBody.getElementsByTagName('tr');
+    let count = 0;
+    for (let r of rows) {
+      if (r.textContent.toLowerCase().includes(q)) { r.style.display = ""; count++; }
+      else r.style.display = "none";
+    }
+    document.getElementById('count-label').innerText = count;
+  }
+
+  function deleteEntry(id) { if(confirm("Supprimer ?")) { passages = passages.filter(p=>p.id!==id); localStorage.setItem('infirmerie_data', JSON.stringify(passages)); renderHistory(); } }
+
+  function prepareEdit(id) {
+    const p = passages.find(i=>i.id===id);
+    document.getElementById('edit-id').value = p.id;
+    document.getElementById('datePassage').value = p.dateBrute;
+    document.getElementById('nom').value = p.nom;
+    document.getElementById('classe').value = p.classe;
+    document.getElementById('motif').value = p.motif;
+    document.getElementById('heureArrivee').value = p.heureArrivee;
+    document.getElementById('appelParents').value = p.appelParents || "Non";
+    document.getElementById('typeSortie').value = p.typeSortie;
+    document.getElementById('heureSortie').value = p.heureSortie;
+    document.getElementById('recupPar').value = p.recupPar || "";
+    toggleRecup();
+    document.getElementById('submit-btn').innerText = "Mettre à jour";
+    document.getElementById('cancel-btn').style.display = "block";
+    window.scrollTo(0,0);
+  }
+
+  function resetForm() {
+    form.reset();
+    document.getElementById('edit-id').value = '';
+    document.getElementById('datePassage').valueAsDate = new Date();
+    document.getElementById('submit-btn').innerText = "Enregistrer";
+    document.getElementById('cancel-btn').style.display = "none";
+    document.getElementById('section-recup').classList.add('hidden');
+  }
+
+  renderHistory();
+</script>
+</body>
+</html>
