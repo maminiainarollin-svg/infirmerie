@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infirmerie - Rapport Officiel</title>
+<title>Infirmerie - Version Finale 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root { --bg: #f5f0eb; --surface: #ffffff; --accent: #c0392b; --text: #2c2416; --border: #ddd5c8; }
@@ -16,40 +16,25 @@
   .row { display: flex; gap: 8px; flex-wrap: wrap; }
   .row > div { flex: 1; min-width: 140px; }
   button { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
-  .btn-report { background: #27ae60; margin-bottom: 10px; }
-  .btn-edit { background: #2980b9; padding: 10px; font-size: 0.8em; margin-bottom: 4px; width: 100%; }
-  .btn-delete { background: #7f8c8d; padding: 10px; font-size: 0.8em; width: 100%; }
+  .btn-edit { background: #2980b9; padding: 10px; font-size: 0.8em; margin-bottom: 4px; width: 100%; color:white; border-radius:4px; border:none; }
+  .btn-delete { background: #7f8c8d; padding: 10px; font-size: 0.8em; width: 100%; color:white; border-radius:4px; border:none; }
   .search-box { background: #e8e0d5; border: 2px solid var(--accent); }
   .stats-badge { background: var(--accent); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
-  
-  /* Container pour éviter la liste trop longue */
-  .history-container { 
-    max-height: 450px; 
-    overflow-y: auto; 
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-top: 10px;
-  }
-  
+  .history-container { max-height: 450px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: fixed; }
   th, td { border: 1px solid var(--border); padding: 8px; text-align: left; vertical-align: top; }
   th { background: var(--text); color: white; position: sticky; top: 0; z-index: 1; }
-  
-  table th:nth-child(1), table td:nth-child(1) { width: 45%; }
-  table th:nth-child(2), table td:nth-child(2) { width: 40%; }
-  table th:nth-child(3), table td:nth-child(3) { width: 15%; }
-
-  .time-info { color: #c0392b; font-weight: bold; font-size: 0.9em; }
-  .status-badge { font-weight: bold; font-size: 0.75em; padding: 2px 4px; border-radius: 4px; display: inline-block; margin-bottom: 3px; border: 1px solid; }
-  .status-classe { color: #27ae60; border-color: #27ae60; }
-  .status-rentree { color: #e67e22; border-color: #e67e22; }
+  .time-info { color: #c0392b; font-weight: bold; }
+  .status-badge { font-weight: bold; font-size: 0.7em; padding: 2px 4px; border-radius: 4px; display: inline-block; margin-bottom: 3px; border: 1px solid; }
+  .status-classe { color: #27ae60; }
+  .status-rentree { color: #e67e22; }
   .hidden { display: none; }
 </style>
 </head>
 <body>
 
 <div class="card">
-  <h2 id="form-title">Saisie de Passage</h2>
+  <h2 id="form-title">Nouveau Passage</h2>
   <form id="infirmery-form">
     <input type="hidden" id="edit-id">
     <div class="form-group"><label>Date</label><input type="date" id="datePassage" required></div>
@@ -78,7 +63,7 @@
     </div>
     <div id="section-recup" class="form-group hidden"><label>Récupéré par</label><input type="text" id="recupPar"></div>
     <button type="submit" id="submit-btn">Enregistrer</button>
-    <button type="button" id="cancel-btn" style="background:#bdc3c7; display:none; margin-top:5px;" onclick="resetForm()">Annuler / Nouveau</button>
+    <button type="button" id="cancel-btn" style="background:#bdc3c7; display:none; margin-top:5px;" onclick="resetForm()">Annuler</button>
   </form>
 </div>
 
@@ -91,7 +76,7 @@
   <div class="history-container">
     <table>
       <thead>
-        <tr><th>Élève</th><th>Infos</th><th>Action</th></tr>
+        <tr><th style="width:45%">Élève</th><th style="width:40%">Infos</th><th style="width:15%">Action</th></tr>
       </thead>
       <tbody id="history-body"></tbody>
     </table>
@@ -99,8 +84,8 @@
 </div>
 
 <script>
-  // LISTE OFFICIELLE DE TON CSV (Intégrée proprement)
-  const officialData = [
+  // TES DONNÉES DU 02-03 AU 06-03
+  const csvData = [
     {id:"1", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Christianah", classe:"Tb", motif:"Maux de ventre, vomissement", heureArrivee:"13:40", heureSortie:"", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
     {id:"2", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Aro", classe:"Tb", motif:"Diarrhée", heureArrivee:"13:36", heureSortie:"", typeSortie:"Retour à la maison", recupPar:"", appelParents:"Non"},
     {id:"3", dateBrute:"2026-03-06", dateAffiche:"06/03/2026", nom:"Maël", classe:"2c", motif:"Maux de ventre", heureArrivee:"12:30", heureSortie:"12:36", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"},
@@ -134,15 +119,16 @@
     {id:"31", dateBrute:"2026-03-02", dateAffiche:"02/03/2026", nom:"Finoana", classe:"5c", motif:"Maux de dents", heureArrivee:"08:15", heureSortie:"08:40", typeSortie:"Retour en classe", recupPar:"", appelParents:"Non"}
   ];
 
-  // --- SÉCURITÉ DE NETTOYAGE FORCÉ ---
-  // Si le code voit qu'il n'a pas encore fait le "grand ménage v4", il vide tout.
-  if (localStorage.getItem('v4_force_clean') !== 'true') {
-      localStorage.clear();
-      localStorage.setItem('infirmerie_data', JSON.stringify(officialData));
-      localStorage.setItem('v4_force_clean', 'true');
-  }
+  // LE SECRET : On change le nom du stockage (de 'infirmerie_data' à 'base_officielle_2026')
+  const NOM_STOCKAGE = 'base_officielle_2026';
+  
+  let passages = JSON.parse(localStorage.getItem(NOM_STOCKAGE));
 
-  let passages = JSON.parse(localStorage.getItem('infirmerie_data')) || officialData;
+  // Si c'est la 1ère fois ou si les données sont buggées, on charge le CSV proprement
+  if (!passages || !Array.isArray(passages) || passages.some(p => typeof p !== 'object')) {
+    passages = csvData;
+    localStorage.setItem(NOM_STOCKAGE, JSON.stringify(passages));
+  }
 
   const form = document.getElementById('infirmery-form');
   const historyBody = document.getElementById('history-body');
@@ -154,23 +140,15 @@
   }
 
   function renderHistory() {
-    // Tri décroissant (Plus récent en haut)
     passages.sort((a, b) => new Date(b.dateBrute + 'T' + b.heureArrivee) - new Date(a.dateBrute + 'T' + a.heureArrivee));
-    
     historyBody.innerHTML = '';
     passages.forEach(p => {
       const isClasse = p.typeSortie.includes('classe');
       historyBody.innerHTML += `<tr>
         <td><b>${p.nom}</b><br><small>${p.classe}</small><br><small>${p.dateAffiche}</small></td>
-        <td>
-          <span class="status-badge ${isClasse ? 'status-classe':'status-rentree'}">${isClasse ? 'CLASSE':'RENTRÉE'}</span><br>
-          <span class="time-info">${p.heureArrivee} ${p.heureSortie ? '→ '+p.heureSortie : ''}</span><br>
-          <small>${p.motif}</small>
-        </td>
-        <td>
-          <button class="btn-edit" onclick="prepareEdit('${p.id}')">✏️</button>
-          <button class="btn-delete" onclick="deleteEntry('${p.id}')">🗑️</button>
-        </td>
+        <td><span class="status-badge ${isClasse?'status-classe':'status-rentree'}">${isClasse?'CLASSE':'RENTRÉE'}</span><br>
+        <span class="time-info">${p.heureArrivee} ${p.heureSortie?'→ '+p.heureSortie:''}</span><br><small>${p.motif}</small></td>
+        <td><button class="btn-edit" onclick="prepareEdit('${p.id}')">✏️</button><button class="btn-delete" onclick="deleteEntry('${p.id}')">🗑️</button></td>
       </tr>`;
     });
     filterHistory();
@@ -182,7 +160,6 @@
     const dStr = document.getElementById('datePassage').value;
     const pDate = dStr.split('-');
     const dateAffiche = `${pDate[2]}/${pDate[1]}/${pDate[0]}`;
-
     const entry = {
       id, dateBrute: dStr, dateAffiche,
       nom: document.getElementById('nom').value,
@@ -194,11 +171,9 @@
       heureSortie: document.getElementById('heureSortie').value,
       recupPar: document.getElementById('recupPar').value
     };
-    
     if (document.getElementById('edit-id').value) passages = passages.map(p => p.id === id ? entry : p);
     else passages.push(entry);
-    
-    localStorage.setItem('infirmerie_data', JSON.stringify(passages));
+    localStorage.setItem(NOM_STOCKAGE, JSON.stringify(passages));
     renderHistory();
     resetForm();
   };
@@ -214,7 +189,7 @@
     document.getElementById('count-label').innerText = count;
   }
 
-  function deleteEntry(id) { if(confirm("Supprimer ?")) { passages = passages.filter(p=>p.id!==id); localStorage.setItem('infirmerie_data', JSON.stringify(passages)); renderHistory(); } }
+  function deleteEntry(id) { if(confirm("Supprimer ce passage ?")) { passages = passages.filter(p=>p.id!==id); localStorage.setItem(NOM_STOCKAGE, JSON.stringify(passages)); renderHistory(); } }
 
   function prepareEdit(id) {
     const p = passages.find(i=>i.id===id);
